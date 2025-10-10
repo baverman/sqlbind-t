@@ -245,12 +245,10 @@ def LIKE(field: SafeStr, template: str, value: Union[str, UndefinedType], op: st
     * `%{}`: endswith
     * `%{}%`: contains
 
-    >>> q.LIKE('tag', '{}%', 'my_tag')
-    'tag LIKE ?'
-    >>> q
-    ['my\\_tag%']
-    >>> q.LIKE('tag', '{}%', not_none/None)  # supports UNDEFINED values
-    ''
+    >>> render(LIKE('tag', '{}%', 'my_tag'))
+    ('tag LIKE ?', ['my\\_tag%'])
+    >>> LIKE('tag', '{}%', not_none/None) is EMPTY  # supports UNDEFINED values
+    True
     """
     if value is UNDEFINED:
         return EMPTY

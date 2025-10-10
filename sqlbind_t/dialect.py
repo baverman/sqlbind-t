@@ -1,6 +1,6 @@
 from typing import Generic, Iterator, Optional, Tuple, TypeVar, Union, overload
 
-from . import SQL, AnySQL, Expr, SafeStr
+from . import SQL, UNDEFINED, AnySQL, Expr, SafeStr
 from .compat import Collection
 from .query_params import ParamsT, QMarkQueryParams, QueryParams
 from .template import Interpolation, Template
@@ -65,6 +65,11 @@ class Dialect:
         return ''.join(self._walk(query, lparams)), lparams
 
     def _walk(self, query: AnySQL, params: QueryParams) -> Iterator[str]:
+        if isinstance(query, Template):
+            if any(it.value is UNDEFINED for it in query if isinstance(it, Interpolation)):
+                yield ''
+                return
+
         for it in query:
             if type(it) is str:
                 yield it

@@ -150,8 +150,8 @@ class TransformingFinder(PathFinder):
         self._pytest_hook = pytest_hook
 
     def find_spec(self, fullname, path, target=None):  # type: ignore[no-untyped-def,override]
-        spec = super().find_spec(fullname, path, target=target)
         if any(fullname.startswith(it) for it in self._sqlbind_prefixes):
+            spec = super().find_spec(fullname, path, target=target)
             if spec and spec.origin and spec.origin.endswith('.py'):
                 rewrite_pytest = self._pytest_hook and self._pytest_hook._should_rewrite(
                     fullname, spec.origin, DummyState
@@ -164,7 +164,7 @@ class TransformingFinder(PathFinder):
                     pytest_hook=self._pytest_hook,
                 )
                 return spec
-        return spec
+        return None
 
 
 def init(prefixes: List[str], pytest: bool = False, sigil: str = '@') -> None:

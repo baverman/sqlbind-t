@@ -1,5 +1,5 @@
 mypy
 ruff
-pytest
+pytest<9
 coverage
 typing_extensions

@@ -25,3 +25,6 @@ omit = ["_typecheck.py"]
 
 [tool.coverage.report]
 fail_under = 100
+
+[tool.pytest.ini_options]
+addopts = "--doctest-glob=README.md --doctest-modules"

@@ -1,4 +1,7 @@
-from typing_extensions import assert_type
+try:
+    from typing_extensions import assert_type
+except ImportError:
+    pass
 
 from . import SQL, WHERE, Expr
 from .dialect import render
