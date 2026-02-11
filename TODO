@@ -1,0 +1,9 @@
+* WITH
+* LIMIT
+* OFFSET
+* Check other helpers in original sqlbind.
+* not_empty marker to poison parent template.
+* Move _typecheck into tests.
+* Automatic tests for all python examples in README.md
+* Describe where API uses trusted strings for column names.
+* Postgresql dialect to use ANY as IN operator.

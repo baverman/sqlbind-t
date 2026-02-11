@@ -35,11 +35,11 @@ class SQL:
     def __iter__(self) -> Iterator[Part]:
         return iter(self._parts)
 
-    def __or__(self, other: AnySQL) -> 'SQL':
-        return OR(self, other)
+    def __or__(self, other: SafeStr) -> 'SQL':
+        return OR(self, safe_sql(other))
 
-    def __and__(self, other: AnySQL) -> 'SQL':
-        return AND(self, other)
+    def __and__(self, other: SafeStr) -> 'SQL':
+        return AND(self, safe_sql(other))
 
     def __invert__(self) -> 'SQL':
         if self:
@@ -117,8 +117,23 @@ def AND(*fragments: AnySQL) -> SQL:
     return join_fragments(' AND ', fragments, ('(', ')'))
 
 
+def prefixed(prefix: str, template: AnySQL) -> SQL:
+    tpl = sql(template)
+    if tpl:
+        return SQL(prefix, *tpl)
+    return EMPTY
+
+
+def AND_(template: AnySQL) -> SQL:
+    return prefixed('AND ', template)
+
+
 def OR(*fragments: AnySQL) -> SQL:
     return join_fragments(' OR ', fragments, ('(', ')'))
+
+
+def OR_(template: AnySQL) -> SQL:
+    return prefixed('OR ', template)
 
 
 def join_fragments(
@@ -206,6 +221,12 @@ def safe_part(value: SafeStr) -> Part:
     if isinstance(value, Expr):
         return value._left
     return Interpolation(value)
+
+
+def safe_sql(value: SafeStr) -> AnySQL:
+    if isinstance(value, Expr):
+        return SQL(value._left)
+    return value
 
 
 def _in_range(field: SafeStr, lop: str, left: object, rop: str, right: object) -> SQL:
@@ -304,6 +325,12 @@ class Expr:
 
     def __invert__(self) -> SQL:
         return SQL('NOT ' + self._left)
+
+    def __and__(self, other: SafeStr) -> SQL:
+        return AND(SQL(self._left), safe_sql(other))
+
+    def __or__(self, other: SafeStr) -> SQL:
+        return OR(SQL(self._left), safe_sql(other))
 
     def IN(self, right: Union[Collection[object], UndefinedType]) -> SQL:
         return IN(self, right)

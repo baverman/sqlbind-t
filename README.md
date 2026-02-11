@@ -95,6 +95,9 @@ Some things to consider:
   around it. As a last step before execution user renders template into actual
   raw SQL and execution parameters.
 
+* **sqlbind-t** doesn't parse SQL in t-strings. It only concatenates stuff
+  and extracts interpolations as execution parameters.
+
 * There is a large set of functions/methods to address dynamic queries but you
   haven't use it inline in a single query string. You could use variables to
   keep query parts and stitch resulted SQL from these parts.
@@ -278,6 +281,7 @@ There are also other prependers: `WITH`, `LIMIT`, `OFFSET`, `GROUP_BY`,
 `ORDER_BY`, `SET`. They all omit empty parts or are rendered as
 empty string if all parts are empty.
 
+
 ### Expressions
 
 Expressions (`sqlbind_t.E`) allow to drop excessive quoting and generate templated results with infix operators.
@@ -319,7 +323,7 @@ Expression objects define a set of infix operators allowing to bind a right valu
 
 It could look like a hack and feel ORM-ish but there is no any
 expression trees and tree compilation passes. Expressions
-are immediately rendered as strings and simple to reason about.
+are immediately emit templates with interpolations and simple to reason about.
 
 Let's use expressions with the function:
 
@@ -336,99 +340,100 @@ def get_fresh_users(registered_since: datetime, enabled: Optional[bool] = None):
     return execute_query(query)
 ```
 
+Also you could use `&` operator to join filters to assemble expression without a list:
 
-<!-- I have no any other tricks. It's the final inline version. I can't make it -->
-<!-- more pretty or readable. It's true, inline expressions looks a bit noisy and to -->
-<!-- make it manageable try to extract as much logic and use only `not_none` conditional marker. -->
-<!--  -->
-<!-- IMHO instead of -->
-<!--  -->
-<!-- ```python -->
-<!-- >>> now = None -->
-<!-- >>> show_only_enabled = True -->
-<!-- >>> f'SELECT * FROM users WHERE registered > {q/((now or datetime.utcnow()) - timedelta(days=30))} {AND_(q.enabled == cond(show_only_enabled)/1)}' -->
-<!-- 'SELECT * FROM users WHERE registered > ? AND enabled = ?' -->
-<!--  -->
-<!-- ``` -->
-<!--  -->
-<!-- please consider to use: -->
-<!--  -->
-<!-- ```python -->
-<!-- >>> now = None -->
-<!-- >>> show_only_enabled = True -->
-<!-- >>> registered_since = (now or datetime.utcnow()) - timedelta(days=30) -->
-<!-- >>> enabled = 1 if show_only_enabled else None -->
-<!-- >>> f'SELECT * FROM users WHERE registered > {q/registered_since} {AND_(q.enabled == not_none/enabled)}' -->
-<!-- 'SELECT * FROM users WHERE registered > ? AND enabled = ?' -->
-<!--  -->
-<!-- ``` -->
-<!--  -->
-<!-- Also there is a possibility to construct filters out of line via `WHERE` -->
-<!-- prepender. -->
-<!--  -->
-<!--  -->
-<!-- Also you could use `&` operator to join filters to assemble condition expression without a list: -->
-<!--  -->
-<!-- ```python -->
-<!-- >>> filters = (q.registered > '2023-01-01') & (q.enabled == not_none/True) -->
-<!-- >>> WHERE(filters) -->
-<!-- 'WHERE (registered > ? AND enabled = ?)' -->
-<!--  -->
-<!-- ``` -->
-<!--  -->
-<!-- — "Wait a minute. How does it work? You said there is no expression trees and compilation! And -->
-<!-- all operations return strings!" -->
-<!--  -->
-<!--  -->
-<!--  -->
-<!-- ### Expressions -->
-<!--  -->
-<!-- Well, technically they are strings. Almost all methods and functions return `sqlbind.Expr`. It's a very shallow -->
-<!-- descendant of `str` with only `__or__`, `__and__` and `__invert__` overrides. -->
-<!--  -->
-<!-- ```python -->
-<!-- >>> q('enabled') & q('registered') -->
-<!-- '(enabled AND registered)' -->
-<!-- >>> type(q('enabled')) -->
-<!-- <class 'sqlbind.Expr'> -->
-<!-- >>> type(q.enabled == True) -->
-<!-- <class 'sqlbind.Expr'> -->
-<!--  -->
-<!-- ``` -->
-<!--  -->
-<!-- All Expr instances could be composed with `&`, `|` and `~` (negate) operations. -->
-<!-- Sadly due to python's' precedence rules you have to wrap expressions into -->
-<!-- additional parens to make it work. -->
-<!--  -->
-<!--  -->
-<!-- ### Outro -->
-<!--  -->
-<!-- It's a matter of preference and team code agreements. Personally I don't see anything -->
-<!-- criminal in inline expressions. But it could be a huge red flag for other -->
-<!-- person and it's ok. **sqlbind** gives a choice to use inline or out of line -->
-<!-- approach. -->
-<!--  -->
-<!-- But take a note. For positional dialects (like qmark style) out of line -->
-<!-- rendering has a major drawback. You should take care on part ordering. Binding -->
-<!-- and part usage should be synchronised. For example: -->
-<!--  -->
-<!-- ```python -->
-<!-- >>> q = sqlbind.Dialect.default() -->
-<!-- >>> filter1 = q.registered > '2023-01-01' -->
-<!-- >>> filter2 = q.enabled == 1 -->
-<!-- >>> f'SELECT * FROM users WHERE {filter2} AND {filter1}' -->
-<!-- 'SELECT * FROM users WHERE enabled = ? AND registered > ?' -->
-<!-- >>> q  # parameter ordering mismatches placeholders -->
-<!-- ['2023-01-01', 1] -->
-<!--  -->
-<!-- ``` -->
-<!--  -->
-<!-- It's a largely artificial example but for complex queries composed from -->
-<!-- multiple parts it could be an issue. To reduce chance you could abstract composition -->
-<!-- parts in a way to contain bindings and SQL construction in one go to be -->
-<!-- fully synchronised. -->
-<!--  -->
-<!-- BTW, you could already noticed but out of line variants of `get_fresh_users` -->
-<!-- from [Dynamic queries](#dynamic-queries) and [Conditionals](#conditionals) have -->
-<!-- the same ordering bug: inline and out of line approaches mix quite bad. Always -->
-<!-- use named style Dialect if your connection backend allows it. -->
+```python
+>>> filters = (E.registered > '2023-01-01') & (E.enabled == not_none/True)
+>>> render(WHERE(filters))
+('WHERE (registered > ? AND enabled = ?)', ['2023-01-01', True])
+
+```
+
+Technically all infix operators on expressions and majority of `sqlbind-t`
+helpers return `sqlbind_t.SQL` instances which define logic operators.
+Logic operators themselves return `SQL` instances as well.
+
+```python
+>>> type(E.enabled == True)
+<class 'sqlbind_t.SQL'>
+
+```
+
+`SQL` type is a thin wrapper around t-string template objects providing
+additional methods and operators. To obtain `SQL` instance there is
+`sqlbind_t.sql` (from a t-string) and `sqlbind_t.text` (from safe static text) helpers:
+
+```python
+>>> sql(t'enabled = {True}')
+SQL('enabled = ', Interpolation(True, 'True', None, ''))
+>>> text('registered_since IS NOT NULL')
+SQL('registered_since IS NOT NULL')
+
+```
+
+Note: Internally `SQL` instances are treated as free from UNDEFINED
+interpolations and `sqlbind_t.sql` ensures it. Please avoid calling `SQL`
+constructor directly.
+
+All `SQL` instances could be composed with `&`, `|` and `~` (negate) operations:
+
+```python
+>>> render(~E.enabled | text('registered_since IS NOT NULL'))
+('(NOT enabled OR registered_since IS NOT NULL)', [])
+
+```
+
+Sadly due to python's' precedence rules you have to wrap expressions into
+additional parenthesis to make it work.
+
+
+### Inline filters
+
+What about inlining filters into the query though? You could use
+`AND_` (there is also 'OR_') prepender:
+
+```python
+from sqlbind_t import not_none, E, AND_
+
+def get_fresh_users(registered_since: datetime, enabled: Optional[bool] = None):
+    query = t'''
+        SELECT * FROM users
+        WHERE registered > {registered_since}
+         {AND_(E.enabled == not_none/enabled)}
+        ORDER BY registered
+    '''
+    return execute_query(query)
+```
+
+It could be a viable alternative for extracted filters. It looks almost acceptable
+without nested t-strings and quoting.
+
+That's it. I have no more tricks to make it more readable or pretty.
+
+
+### Inline vs extracted filters
+
+Inline expressions scale really bad for a large set of filters especially with
+complex boolean logic or heavy on conditional markers. To make it manageable
+try to extract as much logic and use only `not_none` conditional marker.
+
+IMHO instead of:
+
+```python
+>>> now = None
+>>> show_only_enabled = True
+>>> query = t'SELECT * FROM users WHERE registered > {(now or datetime.now()) - timedelta(days=30)} {AND_(E.enabled == cond(show_only_enabled)/1)}'
+
+```
+
+please consider to use:
+
+```python
+>>> now = None
+>>> show_only_enabled = True
+>>> registered_since = (now or datetime.now()) - timedelta(days=30)
+>>> enabled = 1 if show_only_enabled else None
+>>> query = t'SELECT * FROM users WHERE registered > {registered_since} {AND_(E.enabled == not_none/enabled)}'
+
+```
+
