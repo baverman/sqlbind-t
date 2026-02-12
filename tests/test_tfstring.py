@@ -59,3 +59,5 @@ def test_match_module_strict_segments() -> None:
 
     assert match_module('tests.test_sqlbind_t', 'tests.*')
     assert not match_module('tests.pkg.test_sqlbind_t', 'tests.*')
+
+    assert match_module('mod.bar.foo', '**')

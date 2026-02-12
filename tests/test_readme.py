@@ -21,7 +21,12 @@ def get_snippets() -> Dict[str, List[Tuple[str, str, int]]]:
     text = open(pathlib.Path(__file__).parent.parent / fname).read()
     data = gather_examples(text)
 
-    result: Dict[str, List[Tuple[str, str, int]]] = {'get_fresh_users': [], 'usage': []}
+    result: Dict[str, List[Tuple[str, str, int]]] = {
+        'get_fresh_users': [],
+        'usage': [],
+        'compatibility': [],
+        'exec': [],
+    }
 
     for body, start in data:
         line = text.count('\n', 0, start) + 1
@@ -29,6 +34,10 @@ def get_snippets() -> Dict[str, List[Tuple[str, str, int]]]:
             key = 'get_fresh_users'
         elif 'def get_user' in body:
             key = 'usage'
+        elif 'raw_sql, params' in body:
+            key = 'compatibility'
+        elif 'myapp.db.queries' in body:
+            key = 'exec'
         else:
             print('---')
             print(body)
@@ -75,12 +84,49 @@ def test_get_fresh_users(fname: str, body: str, line: int) -> None:
     ids=[it[2] for it in snippets['usage']],
 )
 def test_usage(fname: str, body: str, line: int) -> None:
+    has_execute = 'def execute_query' in body
     code = compile_with_offset(body, line - 1, fname)
     conn = MagicMock()
     cursor = conn.cursor.return_value.__enter__.return_value
 
-    ctx: dict[str, Any] = {'connection': conn}
-    exec(code, ctx)
-    ctx['get_user']('some@email')
+    ctx: dict[str, Any]
+    if has_execute:
+        ctx = {'connection': conn}
+    else:
+        ctx = {'execute_query': execute_query}
 
-    cursor.assert_has_calls([call.execute('SELECT * FROM users WHERE email = ?', ['some@email'])])
+    exec(code, ctx)
+    result = ctx['get_user']('some@email')
+
+    if has_execute:
+        cursor.assert_has_calls(
+            [call.execute('SELECT * FROM users WHERE email = ?', ['some@email'])]
+        )
+    else:
+        assert result == ('SELECT * FROM users WHERE email = ?', ['some@email'])
+
+
+@pytest.mark.skipif(not HAS_TSTRINGS, reason='no t-strings')
+@pytest.mark.parametrize(
+    'fname,body,line',
+    snippets['compatibility'],
+    ids=[it[2] for it in snippets['compatibility']],
+)
+def test_compatibility(fname: str, body: str, line: int) -> None:
+    code = compile_with_offset(body, line - 1, fname)
+    ctx: dict[str, Any] = {}
+    exec(code, ctx)
+    assert ctx['raw_sql'] == 'SELECT * FROM users where user_id = ?'
+    assert ctx['params'] == [ctx['user_id']]
+
+
+@pytest.mark.skipif(not HAS_TSTRINGS, reason='no t-strings')
+@pytest.mark.parametrize(
+    'fname,body,line',
+    snippets['exec'],
+    ids=[it[2] for it in snippets['exec']],
+)
+def test_exec(fname: str, body: str, line: int) -> None:
+    code = compile_with_offset(body, line - 1, fname)
+    ctx: dict[str, Any] = {}
+    exec(code, ctx)

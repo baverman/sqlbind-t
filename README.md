@@ -436,3 +436,76 @@ please consider to use:
 >>> query = t'SELECT * FROM users WHERE registered > {registered_since} {AND_(E.enabled == not_none/enabled)}'
 
 ```
+
+## Older python version support
+
+Python before 3.14 has no t-strings but **sqlbind-t** has alternative templatelib
+implementation and some workarounds to mimic t-string syntax to use with older
+Python.
+
+### tf-strings
+
+Instead of using t-strings:
+
+```python
+from sqlbind_t.dialect import render
+
+user_id = 'some-id'
+query = t'SELECT * FROM users where user_id = {user_id}'
+raw_sql, params = render(query)
+```
+
+You could use marked f-strings (tf-strings):
+
+```python
+from sqlbind_t import sqlf
+from sqlbind_t.dialect import render
+
+user_id = 'some-id'
+query = sqlf(f'@SELECT * FROM users where user_id = {user_id}')
+raw_sql, params = render(query)
+```
+
+It works by using custom import hook which replaces all f-strings with `@` prefix in
+resulted AST. It has almost no overhead and semantically similar to t-strings.
+For example, for interpolation expressions, static type checkers see and validate
+the same Python code as with t-strings.
+
+It's required to install the AST transformer before any imports with tf-strings.
+
+`myapp/__init__.py`:
+
+```python
+import sqlbind_t.tfstring
+
+# list modules which require transformations
+sqlbind_t.tfstring.init(['myapp.db.queries'])
+```
+
+`myapp/db/queries.py`:
+
+```python
+from sqlbind_t import sqlf
+
+def get_user(email):
+    query = sqlf(f'@SELECT * FROM users WHERE email = {email}')
+    return execute_query(query)
+```
+
+You could use glob patterns as module names. `*` matches single part in
+qualified name, `**` matches recursively.
+
+
+### Parse and eval
+
+As a last-resort fallback there is `sqlbind_t.sqls` wrapper. Which parses
+template and evaluates interpolations using `eval`. Big downside is static type
+checkers can't check interpolation content.
+
+```python
+from sqlbind_t import sqls
+
+def get_user(email):
+    query = sqls('SELECT * FROM users WHERE email = {email}')
+    return execute_query(query)
+```

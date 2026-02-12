@@ -3,6 +3,8 @@ import re
 from types import CodeType
 from typing import List, Tuple
 
+from sqlbind_t.tfstring import transform_fstrings
+
 
 def norm_sql(query: str) -> str:
     return re.sub(r'(?m)\s+', ' ', query.strip())
@@ -20,6 +22,7 @@ def compile_with_offset(code: str, offset: int, filename: str) -> CodeType:
             e.end_lineno += offset
         raise
     ast.increment_lineno(tree, offset)
+    tree = transform_fstrings(tree, '@')
     return compile(tree, filename, 'exec')
 
 
