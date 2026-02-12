@@ -108,7 +108,7 @@ Some things to consider:
 General use case looks like:
 
 ```python
-import sqlbind_t.dialiect
+import sqlbind_t.dialect
 from sqlbind_t import AnySQL
 
 # A global alias to a dialect used by connection backend.
