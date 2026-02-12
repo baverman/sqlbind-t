@@ -277,8 +277,8 @@ def get_fresh_users(registered_since: datetime, enabled: Optional[bool] = None):
     return execute_query(query)
 ```
 
-There are also other prependers: `WITH`, `LIMIT`, `OFFSET`, `GROUP_BY`,
-`ORDER_BY`, `SET`. They all omit empty parts or are rendered as
+There are also other prependers: `WITH`, `GROUP_BY`, `ORDER_BY`, `SET`.
+They all omit empty parts or are rendered as
 empty string if all parts are empty.
 
 
@@ -436,4 +436,3 @@ please consider to use:
 >>> query = t'SELECT * FROM users WHERE registered > {registered_since} {AND_(E.enabled == not_none/enabled)}'
 
 ```
-

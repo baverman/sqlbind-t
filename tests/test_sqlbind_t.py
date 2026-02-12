@@ -5,12 +5,15 @@ import pytest
 from sqlbind_t import (
     AND_,
     EMPTY,
+    GROUP_BY,
     IN,
     OR_,
+    ORDER_BY,
     SET,
     UNDEFINED,
     VALUES,
     WHERE,
+    WITH,
     E,
     cond,
     in_crange,
@@ -179,3 +182,17 @@ def test_and_prependers() -> None:
     assert render(sqlf(f'@{AND_(E.field == not_none / None)}')) == ('', [])
     assert render(sqlf(f'@{AND_(E.field == not_none / True)}')) == ('AND field = ?', [True])
     assert render(sqlf(f'@{OR_(E.field == not_none / True)}')) == ('OR field = ?', [True])
+
+
+def test_clause_prependers() -> None:
+    assert render(WITH(sqlf(f'@cte AS (SELECT {1})'))) == ('WITH cte AS (SELECT ?)', [1])
+    assert render(WITH(EMPTY, sqlf(f'@x AS (SELECT {1})'))) == ('WITH x AS (SELECT ?)', [1])
+    assert render(WITH(EMPTY)) == ('', [])
+
+    assert render(GROUP_BY(E.user_id, E.country)) == ('GROUP BY user_id, country', [])
+    assert render(GROUP_BY(EMPTY, E.user_id)) == ('GROUP BY user_id', [])
+    assert render(GROUP_BY(EMPTY)) == ('', [])
+
+    assert render(ORDER_BY(E.created_at.DESC, E.id.ASC)) == ('ORDER BY created_at DESC, id ASC', [])
+    assert render(ORDER_BY(EMPTY, E.id.DESC)) == ('ORDER BY id DESC', [])
+    assert render(ORDER_BY(EMPTY)) == ('', [])

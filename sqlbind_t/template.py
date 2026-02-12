@@ -19,8 +19,8 @@ class NTemplate:
     def __iter__(self) -> Iterator[TemplatePart]:
         return iter(self._parts)
 
-    def __bool__(self) -> bool:
-        return bool(self._parts)
+    def __bool__(self) -> bool:  # pragma: no cover
+        raise RuntimeError('Raw templates should not be used as bools')
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}({", ".join(map(repr, self))})'

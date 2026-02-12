@@ -3,5 +3,5 @@ __pycache__
 /build
 /dist
 /*.egg-info/
-ci/image.hsh
+ci/*.hsh
 /.pytest_cache*

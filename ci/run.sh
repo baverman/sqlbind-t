@@ -6,11 +6,13 @@ ctx="$1"
 shift
 
 ver="$(basename "$ctx")"
+image_hash_file="$thisdir/image.$ver.hsh"
 
-if [ -z "$BUILD_IMAGE" ]; then
-    docker build --iidfile "$thisdir/image.hsh" "$ctx"
+if [ -n "$FORCE_IMAGE" -o ! -f "$image_hash_file" ]; then
+    docker build --iidfile "$image_hash_file" "$ctx"
 fi
-image=$(cat "$thisdir/image.hsh")
+
+image=$(cat "$image_hash_file")
 
 mkdir -p .pytest_cache_$ver
 

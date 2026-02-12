@@ -114,7 +114,11 @@ def sqlf(template: Union[AnySQL, str]) -> SQL:
 
 
 def AND(*fragments: AnySQL) -> SQL:
-    return join_fragments(' AND ', fragments, ('(', ')'))
+    return join_fragments(' AND ', [sql(it) for it in fragments], ('(', ')'))
+
+
+def WITH(*fragments: AnySQL) -> SQL:
+    return join_fragments(', ', [sql(it) for it in fragments], prefix='WITH ')
 
 
 def prefixed(prefix: str, template: AnySQL) -> SQL:
@@ -129,7 +133,7 @@ def AND_(template: AnySQL) -> SQL:
 
 
 def OR(*fragments: AnySQL) -> SQL:
-    return join_fragments(' OR ', fragments, ('(', ')'))
+    return join_fragments(' OR ', [sql(it) for it in fragments], ('(', ')'))
 
 
 def OR_(template: AnySQL) -> SQL:
@@ -137,7 +141,7 @@ def OR_(template: AnySQL) -> SQL:
 
 
 def join_fragments(
-    sep: str, flist: Sequence[AnySQL], wrap: Optional[Tuple[str, str]] = None, prefix: str = ''
+    sep: str, flist: Sequence[SQL], wrap: Optional[Tuple[str, str]] = None, prefix: str = ''
 ) -> SQL:
     flist = list(filter(None, flist))
     if not flist:
@@ -155,6 +159,14 @@ def WHERE(*cond: AnySQL, **kwargs: object) -> SQL:
         if value is not UNDEFINED
     ]
     return join_fragments(' AND ', flist, prefix='WHERE ')
+
+
+def GROUP_BY(*fields: SafeStr) -> SQL:
+    return join_fragments(', ', tuple(safe_sql(it) for it in fields), prefix='GROUP BY ')
+
+
+def ORDER_BY(*fields: SafeStr) -> SQL:
+    return join_fragments(', ', tuple(safe_sql(it) for it in fields), prefix='ORDER BY ')
 
 
 def VALUES(data: Optional[List[Dict[str, object]]] = None, **kwargs: object) -> SQL:
@@ -223,10 +235,10 @@ def safe_part(value: SafeStr) -> Part:
     return Interpolation(value)
 
 
-def safe_sql(value: SafeStr) -> AnySQL:
+def safe_sql(value: SafeStr) -> SQL:
     if isinstance(value, Expr):
         return SQL(value._left)
-    return value
+    return sql(value)
 
 
 def _in_range(field: SafeStr, lop: str, left: object, rop: str, right: object) -> SQL:
@@ -300,6 +312,14 @@ class Expr:
         if self._left:
             return self.__class__(f'{self._left}.{name}')
         return self.__class__(name)
+
+    @property
+    def ASC(self) -> SQL:
+        return SQL(f'{self._left} ASC')
+
+    @property
+    def DESC(self) -> SQL:
+        return SQL(f'{self._left} DESC')
 
     def __lt__(self, right: object) -> SQL:
         return op2(f'{self._left} < ', right)
