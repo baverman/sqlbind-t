@@ -3,8 +3,10 @@ from textwrap import dedent
 import pytest
 
 from sqlbind_t import (
+    AND_,
     EMPTY,
     IN,
+    OR_,
     SET,
     UNDEFINED,
     VALUES,
@@ -131,6 +133,11 @@ def test_expr() -> None:
 
     assert render(sqlf(f'@SELECT * FROM {E.table}')) == ('SELECT * FROM table', [])
 
+    assert render(sqlf(f'@{E.foo & E.bar}')) == ('(foo AND bar)', [])
+    assert render(sqlf(f'@{E.foo | E.bar}')) == ('(foo OR bar)', [])
+    assert render(sqlf(f'@{E.foo & (E.bar < 10)}')) == ('(foo AND bar < ?)', [10])
+    assert render(sqlf(f'@{(E.bar < 10) & E.foo}')) == ('(bar < ? AND foo)', [10])
+
 
 def test_in() -> None:
     val = E.val
@@ -161,3 +168,14 @@ def test_cond() -> None:
     is_false = cond(False)
     assert is_true / 10 == 10
     assert is_false / 10 is UNDEFINED
+
+
+def test_undefined_in_nested_templates() -> None:
+    q = f'@boo {not_none / None}'
+    assert render(sqlf(f'@bar {q}')) == ('bar ', [])
+
+
+def test_and_prependers() -> None:
+    assert render(sqlf(f'@{AND_(E.field == not_none / None)}')) == ('', [])
+    assert render(sqlf(f'@{AND_(E.field == not_none / True)}')) == ('AND field = ?', [True])
+    assert render(sqlf(f'@{OR_(E.field == not_none / True)}')) == ('OR field = ?', [True])
