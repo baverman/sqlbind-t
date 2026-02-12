@@ -12,9 +12,9 @@ from sqlbind_t.template import HAS_TSTRINGS
 
 def pytest_collection_modifyitems(config, items):
     if not HAS_TSTRINGS:
-        marker = pytest.mark.skip(reason='no t-strings')
+        marker = pytest.mark.skip(reason='doctests require t-strings')
         for it in items:
-            if it.nodeid.startswith('README.md'):
+            if it.__class__.__name__ == 'DoctestItem':
                 it.add_marker(marker)
 
 
