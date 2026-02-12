@@ -1,3 +1,2 @@
-* Move _typecheck into tests.
 * Describe where API uses trusted strings for column names.
 * Postgresql dialect to use ANY as IN operator.

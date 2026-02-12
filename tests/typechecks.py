@@ -3,9 +3,9 @@ try:
 except ImportError:
     pass
 
-from . import SQL, WHERE, Expr
-from .dialect import render
-from .query_params import NumericQueryParams, QMarkQueryParams
+from sqlbind_t import SQL, WHERE, Expr
+from sqlbind_t.dialect import render
+from sqlbind_t.query_params import NumericQueryParams, QMarkQueryParams
 
 
 def test_return_type_for_default_split() -> None:
