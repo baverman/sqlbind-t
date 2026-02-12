@@ -22,6 +22,8 @@ SafeStr = Union['Expr', AnySQL]
 
 
 class UndefinedType:
+    """Sentinel type for omitted template values."""
+
     pass
 
 
@@ -29,6 +31,14 @@ UNDEFINED = UndefinedType()
 
 
 class SQL:
+    """Composable SQL fragment.
+
+    `SQL` supports boolean operators for composing conditions:
+
+    >>> render(text('a') & text('b'))
+    ('(a AND b)', [])
+    """
+
     def __init__(self, *parts: Part) -> None:
         self._parts = parts
 
@@ -91,10 +101,22 @@ EMPTY = SQL()
 
 
 def text(expr: str) -> SQL:
+    """Create SQL from trusted static text.
+
+    >>> render(text('field IS NOT NULL'))
+    ('field IS NOT NULL', [])
+    """
     return SQL(expr)
 
 
 def sql(template: AnySQL) -> SQL:
+    """Normalize template-like object into `SQL`.
+
+    Returns `EMPTY` when template is poisoned by `UNDEFINED`.
+
+    >>> sql(t'field = {not_none/None}') is EMPTY
+    True
+    """
     if isinstance(template, SQL):
         return template
 
@@ -106,18 +128,38 @@ def sql(template: AnySQL) -> SQL:
 
 
 def sqls(template: str) -> SQL:
+    """Parse a string template expression at runtime.
+
+    >>> render(sqls('SELECT {10}'))
+    ('SELECT ?', [10])
+    """
     return sql(parse_template(template, level=2))
 
 
 def sqlf(template: Union[AnySQL, str]) -> SQL:
+    """Build SQL from transformed f-string template.
+
+    >>> render(sqlf(f'@SELECT {10}'))  # doctest: +SKIP
+    ('SELECT ?', [10])
+    """
     return sql(check_template(template))  # type: ignore[arg-type]
 
 
 def AND(*fragments: AnySQL) -> SQL:
+    """Join non-empty fragments with `AND`.
+
+    >>> render(AND(t'a = {1}', t'b = {2}'))
+    ('(a = ? AND b = ?)', [1, 2])
+    """
     return join_fragments(' AND ', [sql(it) for it in fragments], ('(', ')'))
 
 
 def WITH(*fragments: AnySQL) -> SQL:
+    """Join non-empty fragments as `WITH` entries.
+
+    >>> render(WITH(text('x AS (SELECT 1)')))
+    ('WITH x AS (SELECT 1)', [])
+    """
     return join_fragments(', ', [sql(it) for it in fragments], prefix='WITH ')
 
 
@@ -129,14 +171,29 @@ def prefixed(prefix: str, template: AnySQL) -> SQL:
 
 
 def AND_(template: AnySQL) -> SQL:
+    """Prefix fragment with `AND` when fragment is non-empty.
+
+    >>> render(AND_(t'a = {1}'))
+    ('AND a = ?', [1])
+    """
     return prefixed('AND ', template)
 
 
 def OR(*fragments: AnySQL) -> SQL:
+    """Join non-empty fragments with `OR`.
+
+    >>> render(OR(t'a = {1}', t'b = {2}'))
+    ('(a = ? OR b = ?)', [1, 2])
+    """
     return join_fragments(' OR ', [sql(it) for it in fragments], ('(', ')'))
 
 
 def OR_(template: AnySQL) -> SQL:
+    """Prefix fragment with `OR` when fragment is non-empty.
+
+    >>> render(OR_(t'a = {1}'))
+    ('OR a = ?', [1])
+    """
     return prefixed('OR ', template)
 
 
@@ -153,6 +210,11 @@ def join_fragments(
 
 
 def WHERE(*cond: AnySQL, **kwargs: object) -> SQL:
+    """Build `WHERE` clause from fragments and keyword filters.
+
+    >>> render(WHERE(t'a = {1}', b=2, c=None))
+    ('WHERE a = ? AND b = ? AND c IS NULL', [1, 2])
+    """
     flist = list(sql(it) for it in cond) + [
         SQL(f'{field} IS NULL') if value is None else SQL(f'{field} = ', Interpolation(value))
         for field, value in kwargs.items()
@@ -162,14 +224,29 @@ def WHERE(*cond: AnySQL, **kwargs: object) -> SQL:
 
 
 def GROUP_BY(*fields: SafeStr) -> SQL:
+    """Build `GROUP BY` clause.
+
+    >>> render(GROUP_BY(E.user_id, E.country))
+    ('GROUP BY user_id, country', [])
+    """
     return join_fragments(', ', tuple(safe_sql(it) for it in fields), prefix='GROUP BY ')
 
 
 def ORDER_BY(*fields: SafeStr) -> SQL:
+    """Build `ORDER BY` clause.
+
+    >>> render(ORDER_BY(E.created_at.DESC, E.id.ASC))
+    ('ORDER BY created_at DESC, id ASC', [])
+    """
     return join_fragments(', ', tuple(safe_sql(it) for it in fields), prefix='ORDER BY ')
 
 
 def VALUES(data: Optional[List[Dict[str, object]]] = None, **kwargs: object) -> SQL:
+    """Build `(<fields>) VALUES (...)` fragment.
+
+    >>> render(VALUES(id=10, name='bob'))
+    ('(id, name) VALUES (?, ?)', [10, 'bob'])
+    """
     if data is None:
         data = [kwargs]
 
@@ -197,10 +274,17 @@ def assign(**kwargs: object) -> SQL:
 
 
 def SET(**kwargs: object) -> SQL:
+    """Build `SET` assignment fragment.
+
+    >>> render(SET(name='bob', age=10))
+    ('SET name = ?, age = ?', ['bob', 10])
+    """
     return SQL('SET ', *assign(**kwargs))
 
 
 class NotNone:
+    """Marker helper that omits `None` values."""
+
     def __truediv__(self, other: Optional[T]) -> Union[T, UndefinedType]:
         if other is None:
             return UNDEFINED
@@ -208,6 +292,8 @@ class NotNone:
 
 
 class Truthy:
+    """Marker helper that omits falsey values."""
+
     def __truediv__(self, other: Optional[T]) -> Union[T, UndefinedType]:
         if not other:
             return UNDEFINED
@@ -215,6 +301,8 @@ class Truthy:
 
 
 class Condition:
+    """Marker helper parameterized by explicit boolean condition."""
+
     def __init__(self, cond: object) -> None:
         self._cond = bool(cond)
 
@@ -225,6 +313,8 @@ class Condition:
 
 
 class Required:
+    """Marker helper that omits empty nested SQL fragments."""
+
     def __truediv__(self, other: AnySQL) -> Union[AnySQL, UndefinedType]:
         if not sql(other):
             return UNDEFINED
@@ -258,10 +348,20 @@ def _in_range(field: SafeStr, lop: str, left: object, rop: str, right: object) -
 
 
 def in_range(field: SafeStr, left: object, right: object) -> SQL:
+    """Build half-open range (`>= left AND < right`).
+
+    >>> render(in_range(E.age, 18, 65))
+    ('(age >= ? AND age < ?)', [18, 65])
+    """
     return _in_range(field, '>=', left, '<', right)
 
 
 def in_crange(field: SafeStr, left: object, right: object) -> SQL:
+    """Build closed range (`>= left AND <= right`).
+
+    >>> render(in_crange(E.age, 18, 65))
+    ('(age >= ? AND age <= ?)', [18, 65])
+    """
     return _in_range(field, '>=', left, '<=', right)
 
 
@@ -272,6 +372,11 @@ def op2(left: str, right: object) -> SQL:
 
 
 def IN(field: SafeStr, value: Union[Collection[object], UndefinedType]) -> SQL:
+    """Build dialect-specific `IN` condition.
+
+    >>> render(IN(E.id, [1, 2]))
+    ('id IN ?', [[1, 2]])
+    """
     if value is UNDEFINED:
         return EMPTY
     return SQL(Interpolation(IN_Op(field, list(value))))  # type: ignore[arg-type]
@@ -301,6 +406,11 @@ def LIKE(field: SafeStr, template: str, value: Union[str, UndefinedType], op: st
 
 
 def ILIKE(field: SafeStr, template: str, value: Union[str, UndefinedType]) -> SQL:
+    """Build case-insensitive LIKE condition.
+
+    >>> render(ILIKE(E.name, '{}%', 'foo'))
+    ('name ILIKE ?', ['foo%'])
+    """
     return LIKE(field, template, value, 'ILIKE')
 
 
@@ -308,6 +418,12 @@ SelfExpr = TypeVar('SelfExpr', bound='Expr')
 
 
 class Expr:
+    """Identifier-like expression builder.
+
+    >>> render(t'{E.user.email}')
+    ('user.email', [])
+    """
+
     def __init__(self, left: str = '') -> None:
         self._left = left
 
@@ -323,10 +439,20 @@ class Expr:
 
     @property
     def ASC(self) -> SQL:
+        """Ordering modifier helper.
+
+        >>> render(t'{E.created_at.ASC}')
+        ('created_at ASC', [])
+        """
         return SQL(f'{self._left} ASC')
 
     @property
     def DESC(self) -> SQL:
+        """Ordering modifier helper.
+
+        >>> render(t'{E.created_at.DESC}')
+        ('created_at DESC', [])
+        """
         return SQL(f'{self._left} DESC')
 
     def __lt__(self, right: object) -> SQL:

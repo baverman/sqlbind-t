@@ -7,10 +7,17 @@ from .query_params import QueryParams
 
 
 class Dialect(BaseDialect):
+    """SQLite-specific dialect.
+
+    Uses expanded markers for short `IN` lists and literal expansion for long
+    lists to avoid SQLite parameter limit issues.
+    """
+
     FALSE = '0'
     IN_MAX_VALUES = 10
 
     def IN(self, op: IN_Op, params: QueryParams) -> str:
+        """Render SQLite `IN` expression."""
         values: Collection[Union[float, int, str]] = op.value  # type: ignore[assignment]
         if not values:
             return self.FALSE
@@ -26,6 +33,7 @@ class Dialect(BaseDialect):
 
 
 def sqlite_escape(val: Union[float, int, str]) -> str:
+    """Escape value for literal embedding into SQLite SQL."""
     tval = type(val)
     if tval is str:
         return "'{}'".format(val.replace("'", "''"))  # type: ignore[union-attr]
@@ -35,4 +43,5 @@ def sqlite_escape(val: Union[float, int, str]) -> str:
 
 
 def sqlite_value_list(values: Collection[Union[float, int, str]]) -> str:
+    """Render comma-separated SQLite literal value list."""
     return ','.join(map(sqlite_escape, values))

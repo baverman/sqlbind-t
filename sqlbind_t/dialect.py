@@ -30,22 +30,33 @@ class LIKE_Op(DialectOp[str]):
 
 
 class Dialect:
+    """Default SQL renderer.
+
+    Converts templates/SQL fragments into SQL text and params container.
+    """
+
     FALSE = 'FALSE'
     LIKE_ESCAPE = '\\'
     LIKE_CHARS = '%_'
 
     def IN(self, op: IN_Op, params: QueryParams) -> str:
+        """Render generic `IN` operation.
+
+        Empty value list is rendered as dialect-specific false expression.
+        """
         if op.value:
             f = self.safe_str(op.field, params)
             return f'{f} IN {params.compile(op.value)}'
         return self.FALSE
 
     def LIKE(self, op: LIKE_Op, params: QueryParams) -> str:
+        """Render LIKE operation with escaped value."""
         f = self.safe_str(op.field, params)
         value = like_escape(op.value, self.LIKE_ESCAPE, self.LIKE_CHARS)
         return f'{f} {op.op} {params.compile(op.template.format(value))}'
 
     def safe_str(self, value: SafeStr, params: QueryParams) -> str:
+        """Render trusted SQL fragment without parameter compilation."""
         if isinstance(value, Expr):
             return value._left
         return ''.join(self._walk(value, params))
@@ -57,6 +68,11 @@ class Dialect:
     def render(self, query: AnySQL, params: ParamsT) -> Tuple[str, ParamsT]: ...
 
     def render(self, query: AnySQL, params: Optional[ParamsT] = None) -> Tuple[str, ParamsT]:
+        """Render query into `(sql, params)` pair.
+
+        >>> render(SQL('SELECT ', Interpolation(10)))
+        ('SELECT ?', [10])
+        """
         lparams: ParamsT
         if params is None:
             lparams = QMarkQueryParams()  # type: ignore[assignment]
