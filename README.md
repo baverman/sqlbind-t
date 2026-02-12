@@ -120,6 +120,7 @@ General use case looks like:
 ```python
 import sqlbind_t.dialect
 from sqlbind_t import AnySQL
+from sqlbind_t.query_params import QMarkQueryParams
 
 # A global alias to a dialect used by connection backend.
 # There is DB specific dialect (`sqlbind_t.sqlite.Dialect` for example)
@@ -127,7 +128,8 @@ dialect = sqlbind_t.dialect.Dialect()
 
 def execute_query(query: AnySQL):
     # Render query template into raw SQL and corresponding parameters
-    raw_sql, params = dialect.render(query)
+    # using explicit query parameter style (qmark: `?`).
+    raw_sql, params = dialect.render(query, QMarkQueryParams())
     with connection.cursor() as cursor:  # use your DBAPI connection
         return cursor.execute(raw_sql, params).fetchall()
 
@@ -140,6 +142,30 @@ def get_user(email: str):
 
 As a shortcut you could use `sqlbind_t.dialect.render` function as a default
 dialect render.
+
+
+### Parameter marker styles
+
+To render a query for a specific DBAPI marker style pass corresponding params
+container:
+
+```python
+>>> import sqlbind_t.query_params as qp
+>>> query = t'SELECT {10}, {20}'
+>>> render(query, qp.QMarkQueryParams())
+('SELECT ?, ?', [10, 20])
+>>> render(query, qp.FormatQueryParams())
+('SELECT %s, %s', [10, 20])
+>>> render(query, qp.NumericQueryParams())
+('SELECT :1, :2', [10, 20])
+>>> render(query, qp.DollarQueryParams())
+('SELECT $1, $2', [10, 20])
+>>> render(query, qp.NamedQueryParams())
+('SELECT :p0, :p1', {'p0': 10, 'p1': 20})
+>>> render(query, qp.PyFormatQueryParams())
+('SELECT %(p0)s, %(p1)s', {'p0': 10, 'p1': 20})
+
+```
 
 
 ## Static queries
