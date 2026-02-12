@@ -26,6 +26,16 @@ non-DBAPI interface.
 [ch]: https://clickhouse-driver.readthedocs.io/en/latest/quickstart.html#selecting-data
 
 
+## Table of contents
+
+* [Installation](#installation)
+* [Motivation](#motivation)
+* [Quick start](#quick-start)
+* [Static queries](#static-queries)
+* [Dynamic queries](#dynamic-queries)
+* [Older python version support](#older-python-version-support)
+
+
 ## Installation
 
 ```
@@ -470,6 +480,9 @@ It works by using custom import hook which replaces all f-strings with `@` prefi
 resulted AST. It has almost no overhead and semantically similar to t-strings.
 For example, for interpolation expressions, static type checkers see and validate
 the same Python code as with t-strings.
+
+`sqlf` works as type wrapper for static type checkers and ensures argument is
+a transformed template.
 
 It's required to install the AST transformer before any imports with tf-strings.
 
