@@ -33,6 +33,7 @@ non-DBAPI interface.
 * [Quick start](#quick-start)
 * [Static queries](#static-queries)
 * [Dynamic queries](#dynamic-queries)
+* [Trusted SQL fragments and identifiers](#trusted-sql-fragments-and-identifiers)
 * [Older python version support](#older-python-version-support)
 
 
@@ -166,7 +167,6 @@ container:
 ('SELECT %(p0)s, %(p1)s', {'p0': 10, 'p1': 20})
 
 ```
-
 
 ## Static queries
 
@@ -488,6 +488,21 @@ please consider to use:
 >>> query = t'SELECT * FROM users WHERE registered > {registered_since} {AND_(E.enabled == not_none/enabled)}'
 
 ```
+
+## Trusted SQL fragments and identifiers
+
+By default, values inside `{...}` are treated as query parameters and are
+bound safely. But some API entry points deliberately embed SQL text directly.
+Use them only with trusted strings (not user input):
+
+* `text('...')`: inserts a raw SQL fragment.
+* `E(name)` / `E.table.column`: emits identifier-like SQL as-is.
+* Keyword-based field names in `WHERE(**kwargs)`, `SET(**kwargs)` and
+  `VALUES(**kwargs)` are inserted into SQL directly.
+
+If field names or SQL fragments are influenced by external input, validate them
+against an explicit allowlist before passing them into these APIs.
+
 
 ## Older python version support
 
