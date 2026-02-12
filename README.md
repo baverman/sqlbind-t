@@ -215,10 +215,11 @@ empty string.
 
 `cond` is a generic form. To remove a repetition (`enabled is not
 None`/`enabled`) when value is used both in a condition and as a parameter
-value there are two helpers for most common cases:
+value there are helpers for most common cases:
 
 * `sqlbind_t.not_none`: to check value is not None.
 * `sqlbind_t.truthy`: to check value's trueness (`bool(value) is True`).
+* `sqlbind_t.required`: forces parent template to be empty if sub-template is empty.
 
 ```python
 >>> enabled = True
@@ -226,6 +227,21 @@ value there are two helpers for most common cases:
 ('AND enabled = ?', [True])
 >>> enabled = None
 >>> render(t'AND enabled = {not_none/enabled}')
+('', [])
+
+```
+
+`required` is useful when wrapper SQL should be omitted for empty nested
+templates:
+
+```python
+>>> enabled = True
+>>> nested = E.enabled == not_none/enabled
+>>> render(t'WHERE {required/nested}')
+('WHERE enabled = ?', [True])
+>>> enabled = None
+>>> nested = E.enabled == not_none/enabled
+>>> render(t'WHERE {required/nested}')
 ('', [])
 
 ```

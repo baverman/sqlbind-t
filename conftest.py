@@ -30,6 +30,7 @@ def set_doctest_ns(doctest_namespace):
     doctest_namespace['connection'] = connection
     doctest_namespace['cond'] = sqlbind_t.cond
     doctest_namespace['not_none'] = sqlbind_t.not_none
+    doctest_namespace['required'] = sqlbind_t.required
     doctest_namespace['E'] = sqlbind_t.E
     doctest_namespace['datetime'] = datetime
     doctest_namespace['timedelta'] = timedelta

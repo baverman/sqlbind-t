@@ -19,6 +19,7 @@ from sqlbind_t import (
     in_crange,
     in_range,
     not_none,
+    required,
     sql,
     sqlf,
     sqls,
@@ -171,6 +172,14 @@ def test_cond() -> None:
     is_false = cond(False)
     assert is_true / 10 == 10
     assert is_false / 10 is UNDEFINED
+
+
+def test_required() -> None:
+    assert render(sqlf(f'@WHERE {required / (E.enabled == not_none / True)}')) == (
+        'WHERE enabled = ?',
+        [True],
+    )
+    assert render(sqlf(f'@WHERE {required / (E.enabled == not_none / None)}')) == ('', [])
 
 
 def test_undefined_in_nested_templates() -> None:

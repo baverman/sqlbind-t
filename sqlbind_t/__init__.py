@@ -224,9 +224,17 @@ class Condition:
         return other
 
 
+class Required:
+    def __truediv__(self, other: AnySQL) -> Union[AnySQL, UndefinedType]:
+        if not sql(other):
+            return UNDEFINED
+        return other
+
+
 not_none = NotNone()
 truthy = Truthy()
 cond = Condition
+required = Required()
 
 
 def safe_part(value: SafeStr) -> Part:
