@@ -4,7 +4,7 @@ import pytest
 
 from sqlbind_t import tfstring
 
-tfstring.init(['tests.'], pytest=True)
+tfstring.init(['tests.*'], pytest=True)
 
 import sqlbind_t.dialect
 from sqlbind_t.template import HAS_TSTRINGS

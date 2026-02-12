@@ -15,6 +15,7 @@ from ast import (
     fix_missing_locations,
     parse,
 )
+from fnmatch import fnmatchcase
 from importlib.machinery import PathFinder
 from typing import Any, List, Optional
 
@@ -144,13 +145,13 @@ class DummyState:
 
 
 class TransformingFinder(PathFinder):
-    def __init__(self, prefixes: List[str], sigil: str, *, pytest_hook: Any = None) -> None:
-        self._sqlbind_prefixes = prefixes
+    def __init__(self, patterns: List[str], sigil: str, *, pytest_hook: Any = None) -> None:
+        self._sqlbind_patterns = patterns
         self._sigil = sigil
         self._pytest_hook = pytest_hook
 
     def find_spec(self, fullname, path, target=None):  # type: ignore[no-untyped-def,override]
-        if any(fullname.startswith(it) for it in self._sqlbind_prefixes):
+        if any(match_module(fullname, it) for it in self._sqlbind_patterns):
             spec = super().find_spec(fullname, path, target=target)
             if spec and spec.origin and spec.origin.endswith('.py'):
                 rewrite_pytest = self._pytest_hook and self._pytest_hook._should_rewrite(
@@ -167,11 +168,44 @@ class TransformingFinder(PathFinder):
         return None
 
 
-def init(prefixes: List[str], pytest: bool = False, sigil: str = '@') -> None:
+def match_module(fullname: str, pattern: str) -> bool:
+    """Segment-strict module glob matching.
+
+    `*` matches exactly one module segment.
+    `**` matches zero or more module segments.
+    """
+
+    name_parts = fullname.split('.')
+    pat_parts = pattern.split('.')
+
+    def _match(i: int, j: int) -> bool:
+        while i < len(name_parts) and j < len(pat_parts):
+            token = pat_parts[j]
+            if token == '**':
+                if j == len(pat_parts) - 1:
+                    return True
+                for k in range(i, len(name_parts) + 1):
+                    if _match(k, j + 1):
+                        return True
+                return False
+
+            if not fnmatchcase(name_parts[i], token):
+                return False
+            i += 1
+            j += 1
+
+        if i == len(name_parts):
+            return j == len(pat_parts) or all(it == '**' for it in pat_parts[j:])
+        return False
+
+    return _match(0, 0)
+
+
+def init(modules: List[str], pytest: bool = False, sigil: str = '@') -> None:
     pytest_hook = None
     if pytest:
         from _pytest.assertion.rewrite import AssertionRewritingHook
 
         pytest_hook = next(it for it in sys.meta_path if isinstance(it, AssertionRewritingHook))
 
-    sys.meta_path.insert(0, TransformingFinder(prefixes, sigil, pytest_hook=pytest_hook))
+    sys.meta_path.insert(0, TransformingFinder(modules, sigil, pytest_hook=pytest_hook))

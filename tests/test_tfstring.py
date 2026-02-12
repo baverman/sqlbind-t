@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 import pytest
 
-from sqlbind_t.tfstring import transform_fstrings
+from sqlbind_t.tfstring import match_module, transform_fstrings
 
 
 def execute(source: str) -> Dict[str, Any]:
@@ -43,3 +43,19 @@ def test_type_check() -> None:
     )
     with pytest.raises(RuntimeError, match='prefixed f-string'):
         ctx['boo']('zoom')
+
+
+def test_match_module_strict_segments() -> None:
+    assert match_module('mod.bar.foo', 'mod.*.foo')
+    assert not match_module('mod.bar.boo.foo', 'mod.*.foo')
+
+    # trailing ** should match any remainder
+    assert match_module('mod.bar.boo.foo', 'mod.**')
+
+    assert match_module('mod.bar.foo', 'mod.**.foo')
+    assert match_module('mod.bar.boo.foo', 'mod.**.foo')
+    assert match_module('mod.foo', 'mod.**.foo')
+    assert not match_module('mod.bar.boo', 'mod.**.foo')
+
+    assert match_module('tests.test_sqlbind_t', 'tests.*')
+    assert not match_module('tests.pkg.test_sqlbind_t', 'tests.*')
