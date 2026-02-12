@@ -13,7 +13,7 @@ from .compat import Collection
 from .template import Interpolation, Template, parse_template
 from .tfstring import check_template
 
-version = '0.1'
+version = '0.9'
 
 T = TypeVar('T')
 Part = Union[str, Interpolation]

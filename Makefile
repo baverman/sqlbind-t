@@ -11,6 +11,7 @@ lint:
 all: fmt lint
 
 build:
+	rm -rf build || true
 	python -m build -nw .
 
 %.whl:
