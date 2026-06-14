@@ -1,0 +1,7 @@
+- [x] Add a fully runnable "Quick start" snippet with all required imports (`t`, `render`, `AnySQL`, `QMarkQueryParams`) and a minimal `execute_query` example.
+- [x] Clarify `tfstring.init(...)` lifecycle: where to call it, "call once" expectation, and notes for tests/app entrypoints.
+- [x] Add a driver/paramstyle mapping table (e.g., sqlite/postgres/mysql) to recommended `QueryParams` classes.
+- [ ] Expand the `IN` + SQLite note: what behavior is supported and known edge cases/limitations.
+- [ ] Add an explicit security warning in `sqls(...)` section: interpolation uses `eval`; never use untrusted template strings.
+- [ ] Add explicit Python support range in Installation section (for example: `python_requires >= 3.6`).
+- [ ] Normalize README style/tone (choose narrative tutorial vs concise reference) and apply consistently across sections.

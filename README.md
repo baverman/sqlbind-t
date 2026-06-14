@@ -4,6 +4,7 @@
 t-string templates.
 
 ```python
+>>> from sqlbind_t.dialect import render
 >>> email = 'some@domain.com'
 >>> query = t'SELECT * FROM users WHERE email = {email}'
 >>> raw_sql, params = render(query)
@@ -143,6 +144,42 @@ def get_user(email: str):
 
 As a shortcut you could use `sqlbind_t.dialect.render` function as a default
 dialect render.
+
+
+### Dialects
+
+Pick a dialect that matches your backend when you rely on backend-specific SQL
+rendering. The default `sqlbind_t.dialect.Dialect` is generic; specialized
+dialects adjust how some operations render (notably `IN`).
+
+#### SQLite
+
+SQLite dialect expands `IN` lists and falls back to literal expansion for long lists to
+avoid parameter limits.
+
+```python
+import sqlbind_t.sqlite
+
+dialect = sqlbind_t.sqlite.Dialect()
+```
+
+#### PostgreSQL
+
+PostgreSQL dialect renders `IN` as `= ANY(array_param)`. This avoids driver
+limitations around `IN %s` with tuples (see [psycopg3 notes][psycopg3-in-any]).
+
+```python
+import sqlbind_t.postgresql
+
+dialect = sqlbind_t.postgresql.Dialect()
+```
+
+#### Other DBs
+
+Use the generic `sqlbind_t.dialect.Dialect` and call its `render`, or use the
+`sqlbind_t.dialect.render` helper.
+
+[psycopg3-in-any]: https://www.psycopg.org/psycopg3/docs/basic/from_pg2.html#you-cannot-use-in-s-with-a-tuple
 
 
 ### Parameter marker styles
@@ -541,7 +578,10 @@ the same Python code as with t-strings.
 `sqlf` works as type wrapper for static type checkers and ensures argument is
 a transformed template.
 
-It's required to install the AST transformer before any imports with tf-strings.
+Install the AST transformer once at process startup, before importing any module
+that contains tf-strings. In apps, this usually lives in your entrypoint.
+In tests, put it in `conftest.py` before importing modules under test. Avoid
+calling `init(...)` multiple times, since each call adds another importer.
 
 `myapp/__init__.py`:
 

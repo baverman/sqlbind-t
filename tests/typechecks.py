@@ -3,7 +3,7 @@ try:
 except ImportError:
     pass
 
-from sqlbind_t import SQL, WHERE, Expr
+from sqlbind_t import SQL, WHERE, Expr, E, in_range
 from sqlbind_t.dialect import render
 from sqlbind_t.query_params import NumericQueryParams, QMarkQueryParams
 
@@ -28,3 +28,7 @@ def test_expr_extension_should_keep_original_type() -> None:
 
     val = MyExpr().val
     assert_type(val, MyExpr)
+
+
+def test_in_range_should_accept_none() -> None:
+    _ = in_range(E.created, None, None)
