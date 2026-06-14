@@ -157,7 +157,7 @@ dialects adjust how some operations render (notably `IN`).
 SQLite dialect expands `IN` lists and falls back to literal expansion for long lists to
 avoid parameter limits.
 
-```python
+```py
 import sqlbind_t.sqlite
 
 dialect = sqlbind_t.sqlite.Dialect()
@@ -168,7 +168,7 @@ dialect = sqlbind_t.sqlite.Dialect()
 PostgreSQL dialect renders `IN` as `= ANY(array_param)`. This avoids driver
 limitations around `IN %s` with tuples (see [psycopg3 notes][psycopg3-in-any]).
 
-```python
+```py
 import sqlbind_t.postgresql
 
 dialect = sqlbind_t.postgresql.Dialect()

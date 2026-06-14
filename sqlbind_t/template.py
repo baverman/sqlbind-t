@@ -38,8 +38,7 @@ class NInterpolation:
 
 
 if TYPE_CHECKING:
-    Template = NTemplate
-    Interpolation = NInterpolation
+    from string.templatelib import Interpolation, Template
 else:
     if HAS_TSTRINGS:  # pragma: no cover
         from string.templatelib import Interpolation, Template

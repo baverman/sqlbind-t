@@ -90,7 +90,7 @@ class Dialect:
             if type(it) is str:
                 yield it
             else:
-                value: Interpolation = it.value  # type: ignore[union-attr,assignment]
+                value: Interpolation = it.value  # type: ignore[union-attr]
                 if isinstance(value, (Template, SQL)):
                     yield from self._walk(value, params)
                 elif isinstance(value, DialectOp):

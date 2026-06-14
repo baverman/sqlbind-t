@@ -23,7 +23,7 @@ from .compat import pyver
 from .template import Template
 
 if pyver < (3, 8):  # pragma: no cover
-    from ast import Str
+    from ast import Str  # type: ignore[attr-defined]
 else:
     from ast import Constant
 
@@ -39,7 +39,7 @@ class FStringTransformer(NodeTransformer):
         first_str: Optional[str] = None
         if pyver < (3, 8):  # pragma: no cover
             if type(first) is Str:
-                first_str = first.s  # type: ignore[assignment]
+                first_str = first.s  # type: ignore[attr-defined]
         else:
             if type(first) is Constant:
                 first_str = first.value  # type: ignore[assignment]

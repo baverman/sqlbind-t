@@ -3,7 +3,7 @@ try:
 except ImportError:
     pass
 
-from sqlbind_t import SQL, WHERE, Expr, E, in_range
+from sqlbind_t import SQL, WHERE, E, Expr, in_range
 from sqlbind_t.dialect import render
 from sqlbind_t.query_params import NumericQueryParams, QMarkQueryParams
 

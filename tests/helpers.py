@@ -19,7 +19,7 @@ def compile_with_offset(code: str, offset: int, filename: str) -> CodeType:
             with open(filename) as f:
                 e.text = f.read().splitlines()[e.lineno - 1]
         if hasattr(e, 'end_lineno'):
-            e.end_lineno += offset
+            e.end_lineno += offset  # type: ignore[operator]
         raise
     ast.increment_lineno(tree, offset)
     tree = transform_fstrings(tree, '@')
