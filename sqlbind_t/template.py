@@ -1,7 +1,7 @@
 import ast
 import sys
 from ast import Expression, FormattedValue
-from typing import TYPE_CHECKING, Iterator, List, Union
+from typing import Iterator, List, Union
 
 from .compat import pyver
 
@@ -37,14 +37,11 @@ class NInterpolation:
         return f'Interpolation({self.value!r})'
 
 
-if TYPE_CHECKING:
-    from string.templatelib import Interpolation, Template
+if sys.version_info >= (3, 14):
+    from string.templatelib import Interpolation, Template  # pragma: no cover
 else:
-    if HAS_TSTRINGS:  # pragma: no cover
-        from string.templatelib import Interpolation, Template
-    else:
-        Template = NTemplate
-        Interpolation = NInterpolation
+    Template = NTemplate
+    Interpolation = NInterpolation
 
 
 def parse_template(string: str, *, level: int = 1) -> Template:
