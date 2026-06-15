@@ -3,3 +3,5 @@ ruff
 pytest<9
 coverage
 typing_extensions
+build
+setuptools==76.1.0
