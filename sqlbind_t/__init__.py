@@ -242,7 +242,7 @@ def ORDER_BY(*fields: SafeStr) -> SQL:
 
 
 @overload
-def VALUES(data: Optional[List[Dict[str, object]]]) -> SQL: ...
+def VALUES(data: List[Dict[str, object]]) -> SQL: ...
 
 
 @overload
