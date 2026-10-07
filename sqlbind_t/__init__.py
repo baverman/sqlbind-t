@@ -15,7 +15,7 @@ from .compat import Collection
 from .template import Interpolation, Template, parse_template
 from .tfstring import check_template
 
-version = '0.11'
+version = '0.12'
 
 T = TypeVar('T')
 Part = Union[str, Interpolation[Any]]
