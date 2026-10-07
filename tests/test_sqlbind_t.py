@@ -98,6 +98,9 @@ def test_values() -> None:
     q = f'@INSERT INTO boo {VALUES(boo=10, foo=None)}'
     assert render(sqlf(q)) == ('INSERT INTO boo (boo, foo) VALUES (?, ?)', [10, None])
 
+    q = f'@INSERT INTO boo {VALUES([{"boo": 10, "foo": None}])}'
+    assert render(sqlf(q)) == ('INSERT INTO boo (boo, foo) VALUES (?, ?)', [10, None])
+
 
 def test_set() -> None:
     q = f'@UPDATE boo {SET(boo=10, foo=None, bar=not_none / None)}'
@@ -124,9 +127,9 @@ def test_expr() -> None:
     assert render(val > 1) == ('val > ?', [1])
     assert render(val >= 1) == ('val >= ?', [1])
     assert render(val == 1) == ('val = ?', [1])
-    assert render(val == None) == ('val IS NULL', [])  # noqa: E711
+    assert render(val == None) == ('val IS NULL', [])
     assert render(val != truthy / 1) == ('val != ?', [1])
-    assert render(val != None) == ('val IS NOT NULL', [])  # noqa: E711
+    assert render(val != None) == ('val IS NOT NULL', [])
     assert render(~val) == ('NOT val', [])
 
     assert (val == not_none / None) is EMPTY

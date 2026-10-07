@@ -1,4 +1,5 @@
 from typing import (
+    Any,
     Dict,
     Iterator,
     List,
@@ -7,6 +8,7 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
+    overload,
 )
 
 from .compat import Collection
@@ -16,15 +18,13 @@ from .tfstring import check_template
 version = '0.11'
 
 T = TypeVar('T')
-Part = Union[str, Interpolation]
+Part = Union[str, Interpolation[Any]]
 AnySQL = Union['SQL', Template]
 SafeStr = Union['Expr', AnySQL]
 
 
 class UndefinedType:
     """Sentinel type for omitted template values."""
-
-    pass
 
 
 UNDEFINED = UndefinedType()
@@ -215,7 +215,7 @@ def WHERE(*cond: AnySQL, **kwargs: object) -> SQL:
     >>> render(WHERE(t'a = {1}', b=2, c=None))
     ('WHERE a = ? AND b = ? AND c IS NULL', [1, 2])
     """
-    flist = list(sql(it) for it in cond) + [
+    flist = [sql(it) for it in cond] + [
         SQL(f'{field} IS NULL') if value is None else SQL(f'{field} = ', Interpolation(value))
         for field, value in kwargs.items()
         if value is not UNDEFINED
@@ -241,7 +241,15 @@ def ORDER_BY(*fields: SafeStr) -> SQL:
     return join_fragments(', ', tuple(safe_sql(it) for it in fields), prefix='ORDER BY ')
 
 
-def VALUES(data: Optional[List[Dict[str, object]]] = None, **kwargs: object) -> SQL:
+@overload
+def VALUES(data: Optional[List[Dict[str, object]]]) -> SQL: ...
+
+
+@overload
+def VALUES(**kwargs: object) -> SQL: ...
+
+
+def VALUES(data: Optional[List[Dict[str, object]]] = None, **kwargs: object) -> SQL:  # type: ignore[misc]
     """Build `(<fields>) VALUES (...)` fragment.
 
     >>> render(VALUES(id=10, name='bob'))
@@ -427,12 +435,12 @@ class Expr:
     def __init__(self, left: str = '') -> None:
         self._left = left
 
-    def __getattr__(self: SelfExpr, name: str) -> SelfExpr:
+    def __getattr__(self: SelfExpr, name: str) -> SelfExpr:  # noqa: PYI019
         if self._left:
             return self.__class__(f'{self._left}.{name}')
         return self.__class__(name)
 
-    def __call__(self: SelfExpr, name: str) -> SelfExpr:
+    def __call__(self: SelfExpr, name: str) -> SelfExpr:  # noqa: PYI019
         if self._left:
             return self.__class__(f'{self._left}.{name}')
         return self.__class__(name)

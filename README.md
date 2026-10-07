@@ -128,12 +128,14 @@ from sqlbind_t.query_params import QMarkQueryParams
 # There is DB specific dialect (`sqlbind_t.sqlite.Dialect` for example)
 dialect = sqlbind_t.dialect.Dialect()
 
+
 def execute_query(query: AnySQL):
     # Render query template into raw SQL and corresponding parameters
     # using explicit query parameter style (qmark: `?`).
     raw_sql, params = dialect.render(query, QMarkQueryParams())
     with connection.cursor() as cursor:  # use your DBAPI connection
         return cursor.execute(raw_sql, params).fetchall()
+
 
 def get_user(email: str):
     # Use t-string to capture query values
@@ -226,11 +228,11 @@ For example we have a function returning recently registered users:
 
 ```python
 def get_fresh_users(registered_since: datetime):
-    query = t'''\
+    query = t"""\
         SELECT * FROM users
         WHERE registered > {registered_since}
         ORDER BY registered
-    '''
+    """
     return execute_query(query)
 ```
 
@@ -244,11 +246,11 @@ def get_fresh_users(registered_since: datetime, enabled: Optional[bool] = None):
     else:
         enabled_filter = t''
 
-    query = t'''\
+    query = t"""\
         SELECT * FROM users
         WHERE registered > {registered_since} {enabled_filter}
         ORDER BY registered
-    '''
+    """
     return execute_query(query)
 ```
 
@@ -314,14 +316,15 @@ Let's try it in the function:
 ```python
 from sqlbind_t import not_none
 
-def get_fresh_users(registered_since: datetime, enabled: Optional[bool] = None):
-    enabled_filter = t'AND enabled = {not_none/enabled}'
 
-    query = t'''\
+def get_fresh_users(registered_since: datetime, enabled: Optional[bool] = None):
+    enabled_filter = t'AND enabled = {not_none / enabled}'
+
+    query = t"""\
         SELECT * FROM users
         WHERE registered > {registered_since} {enabled_filter}
         ORDER BY registered
-    '''
+    """
     return execute_query(query)
 ```
 
@@ -333,13 +336,14 @@ inline?
 ```python
 from sqlbind_t import not_none
 
+
 def get_fresh_users(registered_since: datetime, enabled: Optional[bool] = None):
-    query = t'''\
+    query = t"""\
         SELECT * FROM users
         WHERE registered > {registered_since}
-              {t'AND enabled = {not_none/enabled}'}
+              {t'AND enabled = {not_none / enabled}'}
         ORDER BY registered
-    '''
+    """
     return execute_query(query)
 ```
 
@@ -356,10 +360,11 @@ It could help with readability of long complex filters.
 ```python
 from sqlbind_t import not_none, WHERE
 
+
 def get_fresh_users(registered_since: datetime, enabled: Optional[bool] = None):
     filters = [
         t'registered > {registered_since}',
-        t'enabled = {not_none/enabled}',
+        t'enabled = {not_none / enabled}',
     ]
 
     query = t'SELECT * FROM users {WHERE(*filters)} ORDER BY registered'
@@ -419,10 +424,11 @@ Let's use expressions with the function:
 ```python
 from sqlbind_t import not_none, WHERE, E
 
+
 def get_fresh_users(registered_since: datetime, enabled: Optional[bool] = None):
     filters = [
         E.registered > registered_since,
-        E.enabled == not_none/enabled,
+        E.enabled == not_none / enabled,
     ]
 
     query = t'SELECT * FROM users {WHERE(*filters)} ORDER BY registered'
@@ -484,13 +490,14 @@ What about inlining filters into the query though? You could use
 ```python
 from sqlbind_t import not_none, E, AND_
 
+
 def get_fresh_users(registered_since: datetime, enabled: Optional[bool] = None):
-    query = t'''
+    query = t"""
         SELECT * FROM users
         WHERE registered > {registered_since}
-         {AND_(E.enabled == not_none/enabled)}
+         {AND_(E.enabled == not_none / enabled)}
         ORDER BY registered
-    '''
+    """
     return execute_query(query)
 ```
 
@@ -597,6 +604,7 @@ sqlbind_t.tfstring.init(['myapp.db.queries'])
 ```python
 from sqlbind_t import sqlf
 
+
 def get_user(email):
     query = sqlf(f'@SELECT * FROM users WHERE email = {email}')
     return execute_query(query)
@@ -614,6 +622,7 @@ checkers can't check interpolation content.
 
 ```python
 from sqlbind_t import sqls
+
 
 def get_user(email):
     query = sqls('SELECT * FROM users WHERE email = {email}')

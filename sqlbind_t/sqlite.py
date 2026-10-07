@@ -32,7 +32,7 @@ class Dialect(BaseDialect):
         return f'{f} IN ({mark_list})'
 
 
-def sqlite_escape(val: Union[float, int, str]) -> str:
+def sqlite_escape(val: Union[float, int, str]) -> str:  # noqa: PYI041
     """Escape value for literal embedding into SQLite SQL."""
     tval = type(val)
     if tval is str:

@@ -18,7 +18,7 @@ def execute_query(query: AnySQL) -> Tuple[str, QMarkQueryParams]:
 
 def get_snippets() -> Dict[str, List[Tuple[str, str, int]]]:
     fname = 'README.md'
-    text = open(pathlib.Path(__file__).parent.parent / fname).read()
+    text = open(pathlib.Path(__file__).parent.parent / fname).read()  # noqa
     data = gather_examples(text)
 
     result: Dict[str, List[Tuple[str, str, int]]] = {

@@ -1,15 +1,17 @@
 import ast
 import sys
 from ast import Expression, FormattedValue
-from typing import Iterator, List, Union
+from typing import Any, Generic, Iterator, List, TypeVar, Union
 
 from .compat import pyver
 
+_T = TypeVar('_T')
+
 HAS_TSTRINGS = sys.version_info[:2] >= (3, 14)
 
-TemplatePart = Union[str, 'Interpolation']
+TemplatePart = Union[str, 'Interpolation[Any]']
 
-__all__ = ['Template', 'Interpolation']
+__all__ = ['Interpolation', 'Template']
 
 
 class NTemplate:
@@ -26,8 +28,8 @@ class NTemplate:
         return f'{self.__class__.__name__}({", ".join(map(repr, self))})'
 
 
-class NInterpolation:
-    def __init__(self, value: object) -> None:
+class NInterpolation(Generic[_T]):
+    def __init__(self, value: _T) -> None:
         self.value = value
 
     def __str__(self) -> str:
@@ -47,7 +49,7 @@ else:
 def parse_template(string: str, *, level: int = 1) -> Template:
     root = ast.parse('f' + repr(string), mode='eval')
     frame = sys._getframe(level)
-    values: List[Union[str, Interpolation]] = []
+    values: List[Union[str, Interpolation[Any]]] = []
     for it in root.body.values:  # type: ignore[attr-defined]
         if type(it) is FormattedValue:
             code = compile(Expression(it.value), '<string>', 'eval')

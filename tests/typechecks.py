@@ -1,9 +1,11 @@
+from typing import Any, Dict
+
 try:
     from typing_extensions import assert_type
 except ImportError:
     pass
 
-from sqlbind_t import SQL, WHERE, E, Expr, in_range
+from sqlbind_t import SQL, VALUES, WHERE, E, Expr, in_range
 from sqlbind_t.dialect import render
 from sqlbind_t.query_params import NumericQueryParams, QMarkQueryParams
 
@@ -32,3 +34,7 @@ def test_expr_extension_should_keep_original_type() -> None:
 
 def test_in_range_should_accept_none() -> None:
     _ = in_range(E.created, None, None)
+
+
+def test_VALUES_should_accept_dict_kwargs(data: Dict[str, Any]) -> None:
+    _ = VALUES(id='some', amount=10, **data)

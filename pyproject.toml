@@ -17,7 +17,7 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 
 [tool.ruff.lint]
-ignore = ["E731", "E402"]
+ignore = ["E731", "E402", "FA100", "S102"]
 
 [tool.coverage.run]
 source = ["sqlbind_t"]

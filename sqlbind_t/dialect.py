@@ -1,4 +1,4 @@
-from typing import Generic, Iterator, Optional, Tuple, TypeVar, Union, overload
+from typing import Any, Generic, Iterator, Optional, Tuple, TypeVar, Union, overload
 
 from . import SQL, UNDEFINED, AnySQL, Expr, SafeStr
 from .compat import Collection
@@ -81,7 +81,7 @@ class Dialect:
         return ''.join(self._walk(query, lparams)), lparams
 
     def _walk(self, query: AnySQL, params: QueryParams) -> Iterator[str]:
-        if isinstance(query, Template):
+        if isinstance(query, Template):  # noqa: SIM102
             if any(it.value is UNDEFINED for it in query if isinstance(it, Interpolation)):
                 yield ''
                 return
@@ -90,7 +90,7 @@ class Dialect:
             if type(it) is str:
                 yield it
             else:
-                value: Interpolation = it.value  # type: ignore[union-attr]
+                value: Interpolation[Any] = it.value  # type: ignore[union-attr]
                 if isinstance(value, (Template, SQL)):
                     yield from self._walk(value, params)
                 elif isinstance(value, DialectOp):
