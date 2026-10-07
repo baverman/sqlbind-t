@@ -249,18 +249,18 @@ def VALUES(data: List[Dict[str, object]]) -> SQL: ...
 def VALUES(**kwargs: object) -> SQL: ...
 
 
-def VALUES(data: Optional[List[Dict[str, object]]] = None, **kwargs: object) -> SQL:  # type: ignore[misc]
+def VALUES(__data__: Optional[List[Dict[str, object]]] = None, **kwargs: object) -> SQL:  # type: ignore[misc]
     """Build `(<fields>) VALUES (...)` fragment.
 
     >>> render(VALUES(id=10, name='bob'))
     ('(id, name) VALUES (?, ?)', [10, 'bob'])
     """
-    if data is None:
-        data = [kwargs]
+    if __data__ is None:
+        __data__ = [kwargs]
 
-    names = list(data[0].keys())
+    names = list(__data__[0].keys())
     result: List[Part] = [f'({", ".join(names)}) VALUES ']
-    for it in data:
+    for it in __data__:
         result.append('(')
         for f in names:
             result.extend((Interpolation(it[f]), ', '))
